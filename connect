@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# Devices should be paired
+
+# Requires 3 settings
+PHONE_MAC="80:7B:3E:7F:47:BB"
+USER_ACCOUNT="internet"
+PASSWORD="access"
+
+# Required Definitions
+PHONE_BLUETOOTH_SERVICES=$(sdptool browse $PHONE_MAC)
+SPP_ERROR=$(sdptool browse $PHONE_MAC | grep -i -B 1  "Service Name: SecureTether SPP")
+SERIAL_ERROR=$(sdptool browse $PHONE_MAC | grep -i -B 1  "Service Name: SecureTether serial port")
+SPP_CHANNEL=$(sdptool browse $PHONE_MAC | grep -i -A 7  "Service Name: SecureTether SPP" | head -n 8 | grep "Channel:" | tr -dc '0-9')
+SERIAL_CHANNEL$(sdptool browse $PHONE_MAC | grep -i -A 7  "Service Name: SecureTether serial port" | head -n 8 | grep "Channel:" | tr -dc '0-9')
+
+# Pair Device
+sudo bluetoothctl
+power on 
+scan on
+agent on 
+pair $PHONE_MAC
+
+# If both channels have an error the script has failed
+if [ $SPP_ERROR = "Service Search failed: Invalid argument"] && [ $SERIAL_ERROR = "Service Search failed: Invalid argument"]
+    then
+    echo "Fatal error no serial or spp connections available" 
+    return 1
+fi
+
+# I only need serial
+if [ -z $SERIAL_ERROR ]
+    then
+        sudo rfcomm bind $CHANNEL $PHONE_MAC $SERIAL_CHANNEL
+        sudo chmod 666 /dev/rfcomm"$SERIAL_CHANNEL"
+        sudo /usr/sbin/pppd user $USER password $PASSWORD call securetether /dev/rfcomm"$SERIAL_CHANNEL" 
+    done 
+fi
+
+
+
+
+
+
